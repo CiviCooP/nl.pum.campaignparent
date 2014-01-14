@@ -3,6 +3,57 @@
 require_once 'campaignparent.civix.php';
 
 /**
+ * Implementation of hook_civicrm_buildForm
+ * 
+ * - add campaign type parent to form
+ * 
+ * @author Erik Hommel (erik.hommel@civicoop.org)
+ * @date 7 Jan 2014
+ * @param string $formName (name of the form)
+ *        object $form
+ */
+function campaignparent_civicrm_buildForm($formName, &$form) {
+    if ($formName == "CRM_Admin_Form_RelationshipType") {
+        CRM_Core_Error::debug("form", $form);
+        exit();
+    }
+    if ($formName == "CRM_Admin_Form_Options") {
+        /*
+         * add campaign type parent to the form if we are dealing with
+         * campaign types
+         */
+        $option_group = $form->getVar('_gName');
+        if ($option_group == "campaign_type") {
+            /*
+             * add parent type to form
+             */
+            
+            $campaign_types = CRM_Campaign_PseudoConstant::campaignType();
+            $parent_types = array_merge(array("- none"), $campaign_types);
+            $form->addElement('select', 'parent_types', ts('Parent Type'), $parent_types);
+            /*
+             * if add, set default to - none, else show current value
+             */
+            
+
+          //CRM_Core_Error::debug("form", $form);
+        //exit();
+          
+            $template_path = realpath(dirname(__FILE__)."/templates");
+            $form->add('text', 'CampaignParent', ts('CampaignParent'));
+            CRM_Core_Region::instance('page-body')->add(array(
+                'template' => "{$template_path}/CampaignParent.tpl"));
+            //CRM_Core_Error::debug("form", $form);
+            //exit();
+        }
+    }
+}
+
+
+
+
+
+/**
  * Implementation of hook_civicrm_config
  */
 function campaignparent_civicrm_config(&$config) {

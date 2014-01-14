@@ -134,10 +134,10 @@
                  <td>{$form.contactOptions.html}</td>
                </tr>
             {/if}
-            {if $gName == "campaign_type"}
+            {if $gName eq "campaign_type"}
                 <tr>
                     <td class="label"><label for="parent_type">Parent Type</label></td>
-                    <td id="parent_type">{$form.parent_types}</td>
+                    <td id="parent_type">{$form.parent_types.html}</td>
                 </tr>
             {/if}
         </table>
