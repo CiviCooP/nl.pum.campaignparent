@@ -13,16 +13,13 @@ require_once 'campaignparent.civix.php';
  *        object $form
  */
 function campaignparent_civicrm_buildForm($formName, &$form) {
-    if ($formName == "CRM_Admin_Form_RelationshipType") {
-        CRM_Core_Error::debug("form", $form);
-        exit();
-    }
     if ($formName == "CRM_Admin_Form_Options") {
         /*
          * add campaign type parent to the form if we are dealing with
          * campaign types
          */
         $option_group = $form->getVar('_gName');
+        $form_action = $form->getVar('_action');
         if ($option_group == "campaign_type") {
             /*
              * add parent type to form
@@ -34,17 +31,23 @@ function campaignparent_civicrm_buildForm($formName, &$form) {
             /*
              * if add, set default to - none, else show current value
              */
+            require_once 'CRM/Campaignparent/CampaignParent.php';
+            if ($form_action == 1) {
+                $defaults = array('parent_types' => 0);
+                $form->setDefaults($defaults);                
+            } else {
+                $function = __FUNCTION__;
+                $default_parent = CRM_Campaignparent_CampaignParent::getCampaignTypeParent($form->getVar('_id'));
+                //$api_option_value = civicrm_api3('OptionValue', 'Getsingle', array('id' => $form->getVar('_id')));
+                $default_option_id = CRM_Utils_Array::key($default_parent_label, $parent_types);
+                $defaults = array('parent_types' => $default_option_id);
+                $form->setDefaults($defaults);
+            }
             
-
-          //CRM_Core_Error::debug("form", $form);
-        //exit();
-          
             $template_path = realpath(dirname(__FILE__)."/templates");
             $form->add('text', 'CampaignParent', ts('CampaignParent'));
             CRM_Core_Region::instance('page-body')->add(array(
                 'template' => "{$template_path}/CampaignParent.tpl"));
-            //CRM_Core_Error::debug("form", $form);
-            //exit();
         }
     }
 }
