@@ -24,10 +24,10 @@ function campaignparent_civicrm_buildForm($formName, &$form) {
             /*
              * add parent type to form
              */
-            
             $campaign_types = CRM_Campaign_PseudoConstant::campaignType();
-            $parent_types = array_merge(array("- none"), $campaign_types);
-            $form->addElement('select', 'parent_types', ts('Parent Type'), $parent_types);
+            $campaign_types[0] = "- none";
+            asort($campaign_types);
+            $form->addElement('select', 'parent_types', ts('Parent Type'), $campaign_types);
             /*
              * if add, set default to - none, else show current value
              */
@@ -36,26 +36,25 @@ function campaignparent_civicrm_buildForm($formName, &$form) {
                 $defaults = array('parent_types' => 0);
                 $form->setDefaults($defaults);                
             } else {
-                $function = __FUNCTION__;
-                $default_parent = CRM_Campaignparent_CampaignParent::getCampaignTypeParent($form->getVar('_id'));
-                //$api_option_value = civicrm_api3('OptionValue', 'Getsingle', array('id' => $form->getVar('_id')));
-                $default_option_id = CRM_Utils_Array::key($default_parent_label, $parent_types);
-                $defaults = array('parent_types' => $default_option_id);
-                $form->setDefaults($defaults);
-            }
-            
-            $template_path = realpath(dirname(__FILE__)."/templates");
-            $form->add('text', 'CampaignParent', ts('CampaignParent'));
-            CRM_Core_Region::instance('page-body')->add(array(
-                'template' => "{$template_path}/CampaignParent.tpl"));
+                /*
+                 * retrieve parent with campaign_type_id
+                 */
+                $form_values = $form->getVar('_values');
+                $campaign_type_id = $form_values['value'];
+                $query = "SELECT parent_campaign_type_id FROM civicrm_campaign_type_parent 
+                    WHERE campaign_type_id = $campaign_type_id";
+                $dao = CRM_Core_DAO::executeQuery($query);
+                if ($dao->fetch()) {
+                    /*
+                     * retrieve label so we can set the correct 
+                     */
+                    $defaults = array('parent_types' => $dao->parent_campaign_type_id);
+                    $form->setDefaults($defaults);
+                }
+            }            
         }
     }
 }
-
-
-
-
-
 /**
  * Implementation of hook_civicrm_config
  */
@@ -121,4 +120,43 @@ function campaignparent_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  */
 function campaignparent_civicrm_managed(&$entities) {
   return _campaignparent_civix_civicrm_managed($entities);
+}
+/**
+ * Implementation of hook_civicrm_postProcess
+ * 
+ * For campaign_types : update parent table
+ */
+function campaignparent_civicrm_postProcess( $formName, &$form ) {
+    /*
+     * pick up after form CRM_Admin_Form_Options
+     * if dealing with campaign_types
+     */
+    if ($formName ==  "CRM_Admin_Form_Options") {
+        $gname = $form->getVar('_gName');
+        if ($gname == "campaign_type") {
+            $action = $form->getVar('_action');
+            $option_value_id = $form->getVar('_id');
+            $submit_values = $form->getVar('_submitValues');
+            /*
+             * if parent_types is not empty, update or insert 
+             * campaign parent type 
+             */
+            if (!empty($submit_values['parent_types'])) {
+                $query = "SELECT value FROM civicrm_option_value WHERE id = $option_value_id";
+                $dao = CRM_Core_DAO::executeQuery($query);
+                if ($dao->fetch()) {
+                    $params = array(
+                        'campaign_type_id'          =>  $dao->value,
+                        'parent_campaign_type_id'   =>  $submit_values['parent_types']
+                    );
+                    $existing = CRM_Campaignparent_CampaignParent::getCampaignTypeParent($dao->value);
+                    if (empty($existing)) {
+                        CRM_Campaignparent_CampaignParent::createCampaignParentType($params);
+                    } else {
+                        CRM_Campaignparent_CampaignParent::updateCampaignParentType($params);
+                    }
+                }
+            }
+        }
+    }
 }
